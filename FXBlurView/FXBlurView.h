@@ -30,6 +30,11 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
+//
+//  Forked by iwill on 2013-12-03.
+//  https://github.com/iwill/FXBlurView
+//
+
 
 #import <UIKit/UIKit.h>
 #import <Accelerate/Accelerate.h>
