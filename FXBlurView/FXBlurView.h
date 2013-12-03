@@ -38,6 +38,7 @@
 @interface UIImage (FXBlurView)
 
 - (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor;
+- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor tintColorIncludesAlphaComponent:(BOOL)tintColorIncludesAlphaComponent;
 
 @end
 
@@ -54,5 +55,6 @@
 @property (nonatomic, assign) NSTimeInterval updateInterval;
 @property (nonatomic, assign) CGFloat blurRadius;
 @property (nonatomic, strong) UIColor *tintColor;
+@property (nonatomic, assign) BOOL tintColorIncludesAlphaComponent;
 
 @end

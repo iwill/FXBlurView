@@ -47,6 +47,11 @@
 
 - (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor
 {
+    return [self blurredImageWithRadius:radius iterations:iterations tintColor:tintColor tintColorIncludesAlphaComponent:NO];
+}
+
+- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor tintColorIncludesAlphaComponent:(BOOL)tintColorIncludesAlphaComponent
+{
     //image must be nonzero size
     if (floorf(self.size.width) * floorf(self.size.height) <= 0.0f) return self;
     
@@ -96,7 +101,7 @@
     //apply tint
     if (tintColor && CGColorGetAlpha(tintColor.CGColor) > 0.0f)
     {
-        CGContextSetFillColorWithColor(ctx, [tintColor colorWithAlphaComponent:0.25].CGColor);
+        CGContextSetFillColorWithColor(ctx, tintColorIncludesAlphaComponent ? tintColor.CGColor : [tintColor colorWithAlphaComponent:0.25].CGColor);
         CGContextSetBlendMode(ctx, kCGBlendModePlusLighter);
         CGContextFillRect(ctx, CGRectMake(0, 0, buffer1.width, buffer1.height));
     }
@@ -225,7 +230,8 @@
                     
                     UIImage *blurredImage = [snapshot blurredImageWithRadius:view.blurRadius
                                                                   iterations:view.iterations
-                                                                   tintColor:view.tintColor];
+                                                                   tintColor:view.tintColor
+                                             tintColorIncludesAlphaComponent:view.tintColorIncludesAlphaComponent];
                     dispatch_sync(dispatch_get_main_queue(), ^{
                         
                         //set image
@@ -413,7 +419,8 @@
         UIImage *snapshot = [self snapshotOfSuperview:self.superview];
         UIImage *blurredImage = [snapshot blurredImageWithRadius:self.blurRadius
                                                       iterations:self.iterations
-                                                       tintColor:self.tintColor];
+                                                       tintColor:self.tintColor
+                                 tintColorIncludesAlphaComponent:self.tintColorIncludesAlphaComponent];
         self.layer.contents = (id)blurredImage.CGImage;
         self.layer.contentsScale = blurredImage.scale;
     }
