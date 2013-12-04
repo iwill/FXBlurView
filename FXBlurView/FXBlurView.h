@@ -42,8 +42,7 @@
 
 @interface UIImage (FXBlurView)
 
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor;
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor tintColorIncludesAlphaComponent:(BOOL)tintColorIncludesAlphaComponent;
+- (UIImage *)blurredImageWithRadius:(CGFloat)radius tintColor:(UIColor *)tintColor saturationDeltaFactor:(CGFloat)saturationDeltaFactor;
 
 @end
 
@@ -56,10 +55,20 @@
 
 @property (nonatomic, getter = isBlurEnabled) BOOL blurEnabled;
 @property (nonatomic, getter = isDynamic) BOOL dynamic;
-@property (nonatomic, assign) NSUInteger iterations;
 @property (nonatomic, assign) NSTimeInterval updateInterval;
 @property (nonatomic, assign) CGFloat blurRadius;
+// !!!: Note that the alpha component of the tintColor is NOT ignored.
 @property (nonatomic, strong) UIColor *tintColor;
-@property (nonatomic, assign) BOOL tintColorIncludesAlphaComponent;
+@property (nonatomic, assign) CGFloat saturationDeltaFactor;
+
+- (void)setupLightEffect;
+- (void)setupExtraLightEffect;
+- (void)setupDarkEffect;
+
+- (void)setupLightEffectWithColor:(UIColor *)tintColor;
+- (void)setupExtraLightEffectWithColor:(UIColor *)tintColor;
+- (void)setupDarkEffectWithColor:(UIColor *)tintColor;
+
+- (void)setupTintEffectWithColor:(UIColor *)tintColor;
 
 @end

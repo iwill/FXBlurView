@@ -41,6 +41,8 @@
 #import <objc/message.h>
 #import <QuartzCore/QuartzCore.h>
 
+#import "UIImage+ImageEffects.h"
+
 
 #import <Availability.h>
 #if !__has_feature(objc_arc)
@@ -48,76 +50,14 @@
 #endif
 
 
+#define OR ? :
+
+
 @implementation UIImage (FXBlurView)
 
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor
+- (UIImage *)blurredImageWithRadius:(CGFloat)radius tintColor:(UIColor *)tintColor saturationDeltaFactor:(CGFloat)saturationDeltaFactor
 {
-    return [self blurredImageWithRadius:radius iterations:iterations tintColor:tintColor tintColorIncludesAlphaComponent:NO];
-}
-
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius iterations:(NSUInteger)iterations tintColor:(UIColor *)tintColor tintColorIncludesAlphaComponent:(BOOL)tintColorIncludesAlphaComponent
-{
-    //image must be nonzero size
-    if (floorf(self.size.width) * floorf(self.size.height) <= 0.0f) return self;
-    
-    //boxsize must be an odd integer
-    uint32_t boxSize = radius * self.scale;
-    if (boxSize % 2 == 0) boxSize ++;
-    
-    //create image buffers
-    CGImageRef imageRef = self.CGImage;
-    vImage_Buffer buffer1, buffer2;
-    buffer1.width = buffer2.width = CGImageGetWidth(imageRef);
-    buffer1.height = buffer2.height = CGImageGetHeight(imageRef);
-    buffer1.rowBytes = buffer2.rowBytes = CGImageGetBytesPerRow(imageRef);
-    CFIndex bytes = buffer1.rowBytes * buffer1.height;
-    buffer1.data = malloc(bytes);
-    buffer2.data = malloc(bytes);
-    
-    //create temp buffer
-    void *tempBuffer = malloc(vImageBoxConvolve_ARGB8888(&buffer1, &buffer2, NULL, 0, 0, boxSize, boxSize,
-                                                         NULL, kvImageEdgeExtend + kvImageGetTempBufferSize));
-    
-    //copy image data
-    CFDataRef dataSource = CGDataProviderCopyData(CGImageGetDataProvider(imageRef));
-    memcpy(buffer1.data, CFDataGetBytePtr(dataSource), bytes);
-    CFRelease(dataSource);
-    
-    for (NSUInteger i = 0; i < iterations; i++)
-    {
-        //perform blur
-        vImageBoxConvolve_ARGB8888(&buffer1, &buffer2, tempBuffer, 0, 0, boxSize, boxSize, NULL, kvImageEdgeExtend);
-        
-        //swap buffers
-        void *temp = buffer1.data;
-        buffer1.data = buffer2.data;
-        buffer2.data = temp;
-    }
-    
-    //free buffers
-    free(buffer2.data);
-    free(tempBuffer);
-    
-    //create image context from buffer
-    CGContextRef ctx = CGBitmapContextCreate(buffer1.data, buffer1.width, buffer1.height,
-                                             8, buffer1.rowBytes, CGImageGetColorSpace(imageRef),
-                                             CGImageGetBitmapInfo(imageRef));
-    
-    //apply tint
-    if (tintColor && CGColorGetAlpha(tintColor.CGColor) > 0.0f)
-    {
-        CGContextSetFillColorWithColor(ctx, tintColorIncludesAlphaComponent ? tintColor.CGColor : [tintColor colorWithAlphaComponent:0.25].CGColor);
-        CGContextSetBlendMode(ctx, kCGBlendModePlusLighter);
-        CGContextFillRect(ctx, CGRectMake(0, 0, buffer1.width, buffer1.height));
-    }
-    
-    //create image from context
-    imageRef = CGBitmapContextCreateImage(ctx);
-    UIImage *image = [UIImage imageWithCGImage:imageRef scale:self.scale orientation:self.imageOrientation];
-    CGImageRelease(imageRef);
-    CGContextRelease(ctx);
-    free(buffer1.data);
-    return image;
+    return [self applyBlurWithRadius:radius tintColor:tintColor saturationDeltaFactor:saturationDeltaFactor maskImage:nil];
 }
 
 @end
@@ -136,7 +76,6 @@
 
 @interface FXBlurView ()
 
-@property (nonatomic, assign) BOOL iterationsSet;
 @property (nonatomic, assign) BOOL blurRadiusSet;
 @property (nonatomic, assign) BOOL dynamicSet;
 @property (nonatomic, assign) BOOL blurEnabledSet;
@@ -234,9 +173,8 @@
                 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
                     
                     UIImage *blurredImage = [snapshot blurredImageWithRadius:view.blurRadius
-                                                                  iterations:view.iterations
                                                                    tintColor:view.tintColor
-                                             tintColorIncludesAlphaComponent:view.tintColorIncludesAlphaComponent];
+                                                       saturationDeltaFactor:view.saturationDeltaFactor];
                     dispatch_sync(dispatch_get_main_queue(), ^{
                         
                         //set image
@@ -286,7 +224,6 @@
 
 - (void)setUp
 {
-    if (!_iterationsSet) _iterations = 3;
     if (!_blurRadiusSet) _blurRadius = 40.0f;
     if (!_dynamicSet) _dynamic = YES;
     if (!_blurEnabledSet) _blurEnabled = YES;
@@ -330,13 +267,6 @@
 - (void)dealloc
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-
-- (void)setIterations:(NSUInteger)iterations
-{
-    _iterationsSet = YES;
-    _iterations = iterations;
-    [self setNeedsDisplay];
 }
 
 - (void)setBlurRadius:(CGFloat)blurRadius
@@ -423,9 +353,8 @@
     {
         UIImage *snapshot = [self snapshotOfSuperview:self.superview];
         UIImage *blurredImage = [snapshot blurredImageWithRadius:self.blurRadius
-                                                      iterations:self.iterations
                                                        tintColor:self.tintColor
-                                 tintColorIncludesAlphaComponent:self.tintColorIncludesAlphaComponent];
+                                           saturationDeltaFactor:self.saturationDeltaFactor];
         self.layer.contents = (id)blurredImage.CGImage;
         self.layer.contentsScale = blurredImage.scale;
     }
@@ -435,12 +364,6 @@
 {
     self.lastUpdate = [NSDate date];
     CGFloat scale = 0.5;
-    if (self.iterations)
-    {
-        CGFloat blockSize = 12.0f/self.iterations;
-        scale = blockSize/MAX(blockSize * 2, self.blurRadius);
-        scale = 1.0f/floorf(1.0f/scale);
-    }
     UIGraphicsBeginImageContextWithOptions(self.bounds.size, YES, scale);
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextTranslateCTM(context, -self.frame.origin.x, -self.frame.origin.y);
@@ -477,6 +400,68 @@
     {
         view.hidden = NO;
     }
+}
+
+- (void)setupLightEffect
+{
+    [self setupLightEffectWithColor:nil];
+}
+
+- (void)setupExtraLightEffect
+{
+    [self setupExtraLightEffectWithColor:nil];
+}
+
+- (void)setupDarkEffect
+{
+    [self setupDarkEffectWithColor:nil];
+}
+
+- (void)setupLightEffectWithColor:(UIColor *)tintColor
+{
+    CGFloat alpha = 0.3;
+    self.blurRadius = 30;
+    self.tintColor = [tintColor colorWithAlphaComponent:alpha] OR [UIColor colorWithWhite:1.0 alpha:alpha];
+    self.saturationDeltaFactor = 1.8;
+}
+
+- (void)setupExtraLightEffectWithColor:(UIColor *)tintColor
+{
+    CGFloat alpha = 0.82;
+    self.blurRadius = 20;
+    self.tintColor = [tintColor colorWithAlphaComponent:alpha] OR [UIColor colorWithWhite:0.97 alpha:alpha];
+    self.saturationDeltaFactor = 1.8;
+}
+
+- (void)setupDarkEffectWithColor:(UIColor *)tintColor
+{
+    CGFloat alpha = 0.73;
+    self.blurRadius = 20;
+    self.tintColor = [tintColor colorWithAlphaComponent:alpha] OR [UIColor colorWithWhite:0.11 alpha:alpha];
+    self.saturationDeltaFactor = 1.8;
+}
+
+- (void)setupTintEffectWithColor:(UIColor *)tintColor
+{
+    const CGFloat EffectColorAlpha = 0.6;
+    UIColor *effectColor = tintColor;
+    int componentCount = CGColorGetNumberOfComponents(tintColor.CGColor);
+    if (componentCount == 2) {
+        CGFloat b;
+        if ([tintColor getWhite:&b alpha:NULL]) {
+            effectColor = [UIColor colorWithWhite:b alpha:EffectColorAlpha];
+        }
+    }
+    else {
+        CGFloat r, g, b;
+        if ([tintColor getRed:&r green:&g blue:&b alpha:NULL]) {
+            effectColor = [UIColor colorWithRed:r green:g blue:b alpha:EffectColorAlpha];
+        }
+    }
+    
+    self.blurRadius = 10;
+    self.tintColor = effectColor;
+    self.saturationDeltaFactor = - 1.0;
 }
 
 @end
