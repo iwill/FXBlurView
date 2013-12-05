@@ -53,16 +53,6 @@
 #define OR ? :
 
 
-@implementation UIImage (FXBlurView)
-
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius tintColor:(UIColor *)tintColor saturationDeltaFactor:(CGFloat)saturationDeltaFactor
-{
-    return [self applyBlurWithRadius:radius tintColor:tintColor saturationDeltaFactor:saturationDeltaFactor maskImage:nil];
-}
-
-@end
-
-
 @interface FXBlurScheduler : NSObject
 
 @property (nonatomic, strong) NSMutableArray *views;
@@ -172,9 +162,10 @@
                 UIImage *snapshot = [view snapshotOfSuperview:view.superview];
                 dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
                     
-                    UIImage *blurredImage = [snapshot blurredImageWithRadius:view.blurRadius
-                                                                   tintColor:view.tintColor
-                                                       saturationDeltaFactor:view.saturationDeltaFactor];
+                    UIImage *blurredImage = [snapshot applyBlurWithRadius:view.blurRadius
+                                                                tintColor:view.tintColor
+                                                    saturationDeltaFactor:view.saturationDeltaFactor
+                                                                maskImage:nil];
                     dispatch_sync(dispatch_get_main_queue(), ^{
                         
                         //set image
@@ -352,9 +343,10 @@
         !CGRectIsEmpty(self.bounds) && !CGRectIsEmpty(self.superview.bounds))
     {
         UIImage *snapshot = [self snapshotOfSuperview:self.superview];
-        UIImage *blurredImage = [snapshot blurredImageWithRadius:self.blurRadius
-                                                       tintColor:self.tintColor
-                                           saturationDeltaFactor:self.saturationDeltaFactor];
+        UIImage *blurredImage = [snapshot applyBlurWithRadius:self.blurRadius
+                                                    tintColor:self.tintColor
+                                        saturationDeltaFactor:self.saturationDeltaFactor
+                                                    maskImage:nil];
         self.layer.contents = (id)blurredImage.CGImage;
         self.layer.contentsScale = blurredImage.scale;
     }
@@ -465,3 +457,4 @@
 }
 
 @end
+

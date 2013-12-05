@@ -40,26 +40,20 @@
 #import <Accelerate/Accelerate.h>
 
 
-@interface UIImage (FXBlurView)
-
-- (UIImage *)blurredImageWithRadius:(CGFloat)radius tintColor:(UIColor *)tintColor saturationDeltaFactor:(CGFloat)saturationDeltaFactor;
-
-@end
-
-
 @interface FXBlurView : UIView
-
-+ (void)setBlurEnabled:(BOOL)blurEnabled;
-+ (void)setUpdatesEnabled;
-+ (void)setUpdatesDisabled;
 
 @property (nonatomic, getter = isBlurEnabled) BOOL blurEnabled;
 @property (nonatomic, getter = isDynamic) BOOL dynamic;
 @property (nonatomic, assign) NSTimeInterval updateInterval;
+
 @property (nonatomic, assign) CGFloat blurRadius;
 // !!!: Note that the alpha component of the tintColor is NOT ignored.
 @property (nonatomic, strong) UIColor *tintColor;
 @property (nonatomic, assign) CGFloat saturationDeltaFactor;
+
++ (void)setBlurEnabled:(BOOL)blurEnabled;
++ (void)setUpdatesEnabled;
++ (void)setUpdatesDisabled;
 
 - (void)setupLightEffect;
 - (void)setupExtraLightEffect;
@@ -72,3 +66,4 @@
 - (void)setupTintEffectWithColor:(UIColor *)tintColor;
 
 @end
+
